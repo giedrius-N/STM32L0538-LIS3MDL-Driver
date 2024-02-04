@@ -63,7 +63,7 @@ static void MX_TIM6_Init(void);
 
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
-void blink_led(void);
+
 /* USER CODE END 0 */
 
 /**
@@ -99,6 +99,17 @@ int main(void)
   MX_TIM6_Init();
   /* USER CODE BEGIN 2 */
 
+//  LIS3MDL_Startup(hspi2);
+
+  //Read
+//  uint16_t xData = LIS3MDL_GetXaxisData(hspi2);
+//  int16_t xDataDec = TwosCompToDec(xData);
+//
+//  uint16_t yData = LIS3MDL_GetXaxisData(hspi2);
+//  int16_t yDataDec = TwosCompToDec(yData);
+
+  //LIS3MDL_SetDefault(hspi2);
+
   /* USER CODE END 2 */
 
   /* Infinite loop */
@@ -106,7 +117,29 @@ int main(void)
   while (1)
   {
     /* USER CODE END WHILE */
+	  LIS3MDL_Startup(hspi2);
+	  uint8_t statusReg = LIS3MDL_ReadRegister(0x27, hspi2);
+	  if ((statusReg & (1 << 2)) == 0) {
+		  continue;
+	  }
+	  if ((statusReg & (1 << 6)) != 0) {
+		uint16_t xData = LIS3MDL_GetXaxisData(hspi2);
+		int16_t xDataDec = TwosCompToDec(xData);
 
+		float xDensity = xDataDec * 1.0 / 2280;
+
+		uint16_t yData = LIS3MDL_GetYaxisData(hspi2);
+		int16_t yDataDec = TwosCompToDec(yData);
+
+		float yDensity = yDataDec * 1.0 / 2280;
+
+		uint16_t zData = LIS3MDL_GetZaxisData(hspi2);
+		int16_t zDataDec = TwosCompToDec(zData);
+
+		float zDensity = zDataDec * 1.0 / 2280;
+
+		int a = 0;
+	  }
     /* USER CODE BEGIN 3 */
   }
   /* USER CODE END 3 */
