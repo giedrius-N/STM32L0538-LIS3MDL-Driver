@@ -1,5 +1,5 @@
 #include "main.h"
-#include "lis3mdl.hpp"
+#include "LIS3MDL.hpp"
 
 void LIS3MDL_Startup(SPI_HandleTypeDef hspi)
 {
@@ -18,6 +18,10 @@ void LIS3MDL_Startup(SPI_HandleTypeDef hspi)
 	//Set continuous measurement mode
 	LIS3MDL_WriteRegister(CTRL_REG3, ZERO_VALUE, hspi);
 
+	//Turn on Block data update
+	uint8_t ctrlReg5 = 0xC0;
+	LIS3MDL_WriteRegister(CTRL_REG5, ctrlReg5, hspi);
+
 }
 
 void LIS3MDL_SetDefault(SPI_HandleTypeDef hspi)
@@ -34,6 +38,8 @@ void LIS3MDL_SetDefault(SPI_HandleTypeDef hspi)
 //	uint8_t ctrlReg3 = 0b00000011;
 	uint8_t ctrlReg3 = 0x03;
 	LIS3MDL_WriteRegister(CTRL_REG3, ctrlReg3, hspi);
+
+	LIS3MDL_WriteRegister(CTRL_REG5, ZERO_VALUE, hspi);
 }
 
 uint8_t LIS3MDL_ReadRegister(uint8_t regAddr, SPI_HandleTypeDef hspi)
@@ -74,7 +80,7 @@ void LIS3MDL_WriteRegister(uint8_t regAddr, uint8_t data, SPI_HandleTypeDef hspi
     HAL_GPIO_WritePin(LIS3MDL_CS_GPIO_Port, LIS3MDL_CS_Pin, GPIO_PIN_SET);
 }
 
-uint16_t LIS3MDL_GetXaxisData(SPI_HandleTypeDef hspi)
+int16_t LIS3MDL_GetXaxisData(SPI_HandleTypeDef hspi)
 {
 	uint16_t xAxisData;
 
@@ -83,10 +89,10 @@ uint16_t LIS3MDL_GetXaxisData(SPI_HandleTypeDef hspi)
 
 	xAxisData = (xDataH << 8) | xDataL;
 
-	return xAxisData;
+	return TwosCompToDec(xAxisData);
 }
 
-uint16_t LIS3MDL_GetYaxisData(SPI_HandleTypeDef hspi)
+int16_t LIS3MDL_GetYaxisData(SPI_HandleTypeDef hspi)
 {
 	uint16_t yAxisData;
 
@@ -95,10 +101,10 @@ uint16_t LIS3MDL_GetYaxisData(SPI_HandleTypeDef hspi)
 
 	yAxisData = (yDataH << 8) | yDataL;
 
-	return yAxisData;
+	return TwosCompToDec(yAxisData);
 }
 
-uint16_t LIS3MDL_GetZaxisData(SPI_HandleTypeDef hspi)
+int16_t LIS3MDL_GetZaxisData(SPI_HandleTypeDef hspi)
 {
 	uint16_t zAxisData;
 
@@ -107,7 +113,7 @@ uint16_t LIS3MDL_GetZaxisData(SPI_HandleTypeDef hspi)
 
 	zAxisData = (zDataH << 8) | zDataL;
 
-	return zAxisData;
+	return TwosCompToDec(zAxisData);
 }
 
 

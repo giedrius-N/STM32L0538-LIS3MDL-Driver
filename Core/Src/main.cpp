@@ -21,8 +21,8 @@
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
-#include "lis3mdl.hpp"
-#include <cstdio>
+#include "LIS3MDL.hpp"
+#include <string.h>
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -48,7 +48,7 @@ DMA_HandleTypeDef hdma_spi2_tx;
 TIM_HandleTypeDef htim6;
 
 /* USER CODE BEGIN PV */
-
+UART_HandleTypeDef huart1;
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -58,12 +58,15 @@ static void MX_DMA_Init(void);
 static void MX_SPI2_Init(void);
 static void MX_TIM6_Init(void);
 /* USER CODE BEGIN PFP */
-
+static void MX_USART1_UART_Init(void);
 /* USER CODE END PFP */
 
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
-
+void blink_led() {
+  HAL_GPIO_TogglePin(GPIOB, GPIO_PIN_4);
+  HAL_Delay(500);
+}
 /* USER CODE END 0 */
 
 /**
@@ -98,18 +101,10 @@ int main(void)
   MX_SPI2_Init();
   MX_TIM6_Init();
   /* USER CODE BEGIN 2 */
-
+  MX_USART1_UART_Init();
 //  LIS3MDL_Startup(hspi2);
 
-  //Read
-//  uint16_t xData = LIS3MDL_GetXaxisData(hspi2);
-//  int16_t xDataDec = TwosCompToDec(xData);
-//
-//  uint16_t yData = LIS3MDL_GetXaxisData(hspi2);
-//  int16_t yDataDec = TwosCompToDec(yData);
-
-  //LIS3MDL_SetDefault(hspi2);
-
+  LIS3MDL_Startup(hspi2);
   /* USER CODE END 2 */
 
   /* Infinite loop */
@@ -117,28 +112,34 @@ int main(void)
   while (1)
   {
     /* USER CODE END WHILE */
-	  LIS3MDL_Startup(hspi2);
+	  LIS3MDL_WriteRegister(CTRL_REG3, ZERO_VALUE, hspi2);
+
+		uint8_t ctrlReg5 = 0xC0;
+		LIS3MDL_WriteRegister(CTRL_REG5, ctrlReg5, hspi2);
+		HAL_Delay(100);
 	  uint8_t statusReg = LIS3MDL_ReadRegister(0x27, hspi2);
 	  if ((statusReg & (1 << 2)) == 0) {
 		  continue;
 	  }
 	  if ((statusReg & (1 << 6)) != 0) {
-		uint16_t xData = LIS3MDL_GetXaxisData(hspi2);
-		int16_t xDataDec = TwosCompToDec(xData);
 
-		float xDensity = xDataDec * 1.0 / 2280;
+		  int16_t xData = LIS3MDL_GetXaxisData(hspi2);
+		  int16_t yData = LIS3MDL_GetYaxisData(hspi2);
+		  int16_t zData = LIS3MDL_GetZaxisData(hspi2);
 
-		uint16_t yData = LIS3MDL_GetYaxisData(hspi2);
-		int16_t yDataDec = TwosCompToDec(yData);
+		  char axisDataStr[50];
+		  sprintf(axisDataStr, "%d %d %d\r\n", xData, yData, zData);
 
-		float yDensity = yDataDec * 1.0 / 2280;
+		  uint8_t axisData[50];
+		  memcpy(axisData, axisDataStr, strlen(axisDataStr));
 
-		uint16_t zData = LIS3MDL_GetZaxisData(hspi2);
-		int16_t zDataDec = TwosCompToDec(zData);
 
-		float zDensity = zDataDec * 1.0 / 2280;
+	  	  int result = HAL_UART_Transmit(&huart1, axisData, strlen(axisDataStr), HAL_MAX_DELAY);
+		  HAL_Delay(1000);
 
-		int a = 0;
+
+		  int a = 0;
+
 	  }
     /* USER CODE BEGIN 3 */
   }
@@ -153,6 +154,7 @@ void SystemClock_Config(void)
 {
   RCC_OscInitTypeDef RCC_OscInitStruct = {0};
   RCC_ClkInitTypeDef RCC_ClkInitStruct = {0};
+  RCC_PeriphCLKInitTypeDef PeriphClkInit = {0};
 
   /** Configure the main internal regulator output voltage
   */
@@ -183,6 +185,12 @@ void SystemClock_Config(void)
   RCC_ClkInitStruct.APB2CLKDivider = RCC_HCLK_DIV1;
 
   if (HAL_RCC_ClockConfig(&RCC_ClkInitStruct, FLASH_LATENCY_1) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  PeriphClkInit.PeriphClockSelection = RCC_PERIPHCLK_USART1;
+  PeriphClkInit.Usart1ClockSelection = RCC_USART2CLKSOURCE_PCLK1;
+  if (HAL_RCCEx_PeriphCLKConfig(&PeriphClkInit) != HAL_OK)
   {
     Error_Handler();
   }
@@ -301,8 +309,8 @@ static void MX_GPIO_Init(void)
   HAL_GPIO_WritePin(SS2_GPIO_Port, SS2_Pin, GPIO_PIN_RESET);
 
   /*Configure GPIO pin Output Level */
-  HAL_GPIO_WritePin(GPIOA, LED1_Pin|LED2_Pin|LED3_Pin|LED4_Pin, GPIO_PIN_RESET);
-
+  //HAL_GPIO_WritePin(GPIOA, LED1_Pin|LED2_Pin|LED3_Pin|LED4_Pin, GPIO_PIN_RESET);
+  HAL_GPIO_WritePin(GPIOA, LED1_Pin|LED4_Pin, GPIO_PIN_RESET);
   /*Configure GPIO pin : SS2_Pin */
   GPIO_InitStruct.Pin = SS2_Pin;
   GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
@@ -311,7 +319,8 @@ static void MX_GPIO_Init(void)
   HAL_GPIO_Init(SS2_GPIO_Port, &GPIO_InitStruct);
 
   /*Configure GPIO pins : LED1_Pin LED2_Pin LED3_Pin LED4_Pin */
-  GPIO_InitStruct.Pin = LED1_Pin|LED2_Pin|LED3_Pin|LED4_Pin;
+  //GPIO_InitStruct.Pin = LED1_Pin|LED2_Pin|LED3_Pin|LED4_Pin;
+  GPIO_InitStruct.Pin = LED1_Pin|LED4_Pin;
   GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
@@ -322,7 +331,40 @@ static void MX_GPIO_Init(void)
 }
 
 /* USER CODE BEGIN 4 */
+/**
+  * @brief USART1 Initialization Function
+  * @param None
+  * @retval None
+  */
+static void MX_USART1_UART_Init(void)
+{
 
+  /* USER CODE BEGIN USART1_Init 0 */
+
+  /* USER CODE END USART1_Init 0 */
+
+  /* USER CODE BEGIN USART1_Init 1 */
+
+  /* USER CODE END USART1_Init 1 */
+  huart1.Instance = USART1;
+  huart1.Init.BaudRate = 115200;
+  huart1.Init.WordLength = UART_WORDLENGTH_8B;
+  huart1.Init.StopBits = UART_STOPBITS_1;
+  huart1.Init.Parity = UART_PARITY_NONE;
+  huart1.Init.Mode = UART_MODE_TX_RX;
+  huart1.Init.HwFlowCtl = UART_HWCONTROL_NONE;
+  huart1.Init.OverSampling = UART_OVERSAMPLING_16;
+  huart1.Init.OneBitSampling = UART_ONE_BIT_SAMPLE_DISABLE;
+  huart1.AdvancedInit.AdvFeatureInit = UART_ADVFEATURE_NO_INIT;
+  if (HAL_UART_Init(&huart1) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  /* USER CODE BEGIN USART1_Init 2 */
+
+  /* USER CODE END USART1_Init 2 */
+
+}
 /* USER CODE END 4 */
 
 /**

@@ -8,6 +8,9 @@
 #ifndef INC_LIS3MDL_HPP_
 #define INC_LIS3MDL_HPP_
 
+#include <cmath>
+#include <stdio.h>
+
 /*
  * DEFINES
  */
@@ -19,6 +22,7 @@
 #define CTRL_REG2 0x21
 #define CTRL_REG3 0x22
 #define CTRL_REG4 0x23
+#define CTRL_REG5 0x24
 #define OUT_X_L 0x28
 #define OUT_X_H 0x29
 #define OUT_Y_L 0x2A
@@ -35,11 +39,17 @@ void LIS3MDL_SetDefault(SPI_HandleTypeDef hspi);
 uint8_t LIS3MDL_ReadRegister(uint8_t regAddr, SPI_HandleTypeDef hspi);
 void LIS3MDL_WriteRegister(uint8_t regAddr, uint8_t data, SPI_HandleTypeDef hspi);
 
-uint16_t LIS3MDL_GetXaxisData(SPI_HandleTypeDef hspi);
-uint16_t LIS3MDL_GetYaxisData(SPI_HandleTypeDef hspi);
-uint16_t LIS3MDL_GetZaxisData(SPI_HandleTypeDef hspi);
+int16_t LIS3MDL_GetXaxisData(SPI_HandleTypeDef hspi);
+int16_t LIS3MDL_GetYaxisData(SPI_HandleTypeDef hspi);
+int16_t LIS3MDL_GetZaxisData(SPI_HandleTypeDef hspi);
 
 int16_t TwosCompToDec(uint16_t value);
+
+double GetHeading(SPI_HandleTypeDef hspi2);
+
+void applyMagnetoCorrection(float imu_mx, float imu_my, float imu_mz, float Mxyz[3]);
+
+void dataCorrection(int16_t x, int16_t y, int16_t z, float xyz[]);
 
 
 #endif /* INC_LIS3MDL_HPP_ */
