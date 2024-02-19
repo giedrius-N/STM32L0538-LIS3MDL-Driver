@@ -102,7 +102,7 @@ int main(void)
   MX_TIM6_Init();
   /* USER CODE BEGIN 2 */
   MX_USART1_UART_Init();
-//  LIS3MDL_Startup(hspi2);
+  GPIO_A_5_B_4_Init();
 
   LIS3MDL_Startup(hspi2);
   /* USER CODE END 2 */
@@ -127,10 +127,46 @@ int main(void)
 		  int16_t yData = LIS3MDL_GetYaxisData(hspi2);
 		  int16_t zData = LIS3MDL_GetZaxisData(hspi2);
 
-		  char axisDataStr[50];
-		  sprintf(axisDataStr, "%d %d %d\r\n", xData, yData, zData);
+		  float calib[3];
+		  Calibrate(&xData, &yData, &zData, calib);
 
-		  uint8_t axisData[50];
+		  int heading = round(atan2(calib[1], calib[0]) * 180 / M_PI);
+
+		  if (zData > 0)
+			  heading *= -1;
+
+		  heading += MAG_DECLINATION;
+		  if (heading < 0)
+		      heading += 360;
+		  else if (heading > 360)
+			  heading -= 360;
+
+
+		  if (heading >= 225 && 315 >= heading) {
+			  HAL_GPIO_WritePin(GPIOB, GPIO_PIN_4, GPIO_PIN_RESET);
+			  HAL_Delay(500);
+			  HAL_GPIO_WritePin(GPIOA, GPIO_PIN_5, GPIO_PIN_SET);
+
+		  }
+		  else if (heading >= 45 && 135 >= heading) {
+			  HAL_GPIO_WritePin(GPIOA, GPIO_PIN_5, GPIO_PIN_RESET);
+			  HAL_Delay(500);
+			  HAL_GPIO_WritePin(GPIOB, GPIO_PIN_4, GPIO_PIN_SET);
+		  }
+		  else {
+			  HAL_GPIO_WritePin(GPIOA, GPIO_PIN_5, GPIO_PIN_RESET);
+			  HAL_Delay(500);
+			  HAL_GPIO_WritePin(GPIOB, GPIO_PIN_4, GPIO_PIN_RESET);
+		  }
+
+
+
+
+		  char axisDataStr[20];
+		  sprintf(axisDataStr, "%d\r\n", heading);
+
+
+		  uint8_t axisData[20];
 		  memcpy(axisData, axisDataStr, strlen(axisDataStr));
 
 
@@ -364,6 +400,25 @@ static void MX_USART1_UART_Init(void)
 
   /* USER CODE END USART1_Init 2 */
 
+}
+
+
+static void GPIO_A_5_B_4_Init(void)
+{
+	  GPIO_InitTypeDef GPIO_InitStruct;
+	  GPIO_InitStruct.Pin = GPIO_PIN_4;
+	  GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
+	  GPIO_InitStruct.Pull = GPIO_NOPULL;
+	  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
+	  HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
+
+
+	  GPIO_InitTypeDef GPIO_InitStruct2;
+	  GPIO_InitStruct2.Pin = GPIO_PIN_5;
+	  GPIO_InitStruct2.Mode = GPIO_MODE_OUTPUT_PP;
+	  GPIO_InitStruct2.Pull = GPIO_NOPULL;
+	  GPIO_InitStruct2.Speed = GPIO_SPEED_FREQ_LOW;
+	  HAL_GPIO_Init(GPIOA, &GPIO_InitStruct2);
 }
 /* USER CODE END 4 */
 

@@ -136,3 +136,14 @@ int16_t TwosCompToDec(uint16_t value)
     }
 }
 
+void Calibrate(int16_t *x, int16_t *y, int16_t *z, float *calib)
+{
+	float x_off = *x * 100000.0 / 1100.0 - BIAS_X;
+	float y_off = *y * 100000.0 / 1100.0 - BIAS_Y;
+	float z_off = *z * 100000.0 /  980.0 - BIAS_Z;
+
+	calib[0] = SOFT_IRON_MATRIX_X[0] * x_off + SOFT_IRON_MATRIX_X[1] * y_off + SOFT_IRON_MATRIX_X[2] * z_off;
+	calib[1] = SOFT_IRON_MATRIX_Y[0] * x_off + SOFT_IRON_MATRIX_Y[1] * y_off + SOFT_IRON_MATRIX_Y[2] * z_off;
+	calib[2] = SOFT_IRON_MATRIX_Z[0] * x_off + SOFT_IRON_MATRIX_Z[1] * y_off + SOFT_IRON_MATRIX_Z[2] * z_off;
+}
+
