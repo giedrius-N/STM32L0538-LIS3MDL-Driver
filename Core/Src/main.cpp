@@ -22,6 +22,7 @@
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
 #include "LIS3MDL.hpp"
+#include "helpers.h"
 #include <string.h>
 /* USER CODE END Includes */
 
@@ -118,7 +119,6 @@ int main(void)
     /* USER CODE END WHILE */
 	  LIS3MDL_WriteRegister(CTRL_REG3, ZERO_VALUE, hspi2);
 
-      LIS3MDL_WriteRegister(CTRL_REG5, 0xC0, hspi2);
 	  HAL_Delay(100);
 	  uint8_t statusReg = LIS3MDL_ReadRegister(0x27, hspi2);
 	  if ((statusReg & (1 << 2)) == 0) {
@@ -129,51 +129,13 @@ int main(void)
 		  magRawData.get_axis_data(hspi2);
 
 		  float calib[3];
-		  Calibrate(magRawData, calib);
+		  calibrate(magRawData, calib);
 
-		  int heading = round(atan2(calib[1], calib[0]) * 180 / M_PI);
+		  int heading;
+		  calculate_heading(calib, &heading, magRawData.get_z());
 
-		  if (magRawData.get_z() > 0) {
-			  heading *= -1;
-		  }
-
-		  heading += MAG_DECLINATION;
-		  if (heading < 0)
-		      heading += 360;
-		  else if (heading > 360)
-			  heading -= 360;
-
-
-		  if (heading >= 225 && 315 >= heading) {
-			  HAL_GPIO_WritePin(GPIOB, GPIO_PIN_4, GPIO_PIN_RESET);
-			  HAL_Delay(500);
-			  HAL_GPIO_WritePin(GPIOA, GPIO_PIN_5, GPIO_PIN_SET);
-
-		  }
-		  else if (heading >= 45 && 135 >= heading) {
-			  HAL_GPIO_WritePin(GPIOA, GPIO_PIN_5, GPIO_PIN_RESET);
-			  HAL_Delay(500);
-			  HAL_GPIO_WritePin(GPIOB, GPIO_PIN_4, GPIO_PIN_SET);
-		  }
-		  else {
-			  HAL_GPIO_WritePin(GPIOA, GPIO_PIN_5, GPIO_PIN_RESET);
-			  HAL_Delay(500);
-			  HAL_GPIO_WritePin(GPIOB, GPIO_PIN_4, GPIO_PIN_RESET);
-		  }
-
-		  char axisDataStr[20];
-		  sprintf(axisDataStr, "%d\r\n", heading);
-
-
-		  uint8_t axisData[20];
-		  memcpy(axisData, axisDataStr, strlen(axisDataStr));
-
-
-	  	  int result = HAL_UART_Transmit(&huart1, axisData, strlen(axisDataStr), HAL_MAX_DELAY);
-		  HAL_Delay(1000);
-
-
-		  int a = 0;
+		  handle_leds(heading);
+		  send_heading_uart(heading, huart1);
 
 	  }
     /* USER CODE BEGIN 3 */

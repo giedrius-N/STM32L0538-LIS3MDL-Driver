@@ -1,4 +1,3 @@
-#include "main.h"
 #include "LIS3MDL.hpp"
 
 void LIS3MDL_Startup(SPI_HandleTypeDef hspi)
@@ -136,7 +135,7 @@ int16_t TwosCompToDec(uint16_t value)
     }
 }
 
-void Calibrate(MagnetometerRawData data, float *calib)
+void calibrate(MagnetometerRawData data, float *calib)
 {
 	// Converting raw data in gauss to teslas, substracting the bias offset
 	float x_off = data.get_x() * 100000.0 / 1100.0 - BIAS_X;

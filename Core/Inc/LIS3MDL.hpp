@@ -8,7 +8,8 @@
 #ifndef INC_LIS3MDL_HPP_
 #define INC_LIS3MDL_HPP_
 
-#include <cmath>
+//#include <cmath>
+#include "main.h"
 #include <stdio.h>
 
 /*
@@ -93,7 +94,7 @@ int16_t LIS3MDL_GetZaxisData(SPI_HandleTypeDef hspi);
 
 int16_t TwosCompToDec(uint16_t value);
 
-void Calibrate(MagnetometerRawData data, float *calib);
+void calibrate(MagnetometerRawData data, float *calib);
 
 
 #endif /* INC_LIS3MDL_HPP_ */
