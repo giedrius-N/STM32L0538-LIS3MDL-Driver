@@ -136,14 +136,27 @@ int16_t TwosCompToDec(uint16_t value)
     }
 }
 
-void Calibrate(int16_t *x, int16_t *y, int16_t *z, float *calib)
+void Calibrate(MagnetometerRawData data, float *calib)
 {
-	float x_off = *x * 100000.0 / 1100.0 - BIAS_X;
-	float y_off = *y * 100000.0 / 1100.0 - BIAS_Y;
-	float z_off = *z * 100000.0 /  980.0 - BIAS_Z;
+	// Converting raw data in gauss to teslas, substracting the bias offset
+	float x_off = data.get_x() * 100000.0 / 1100.0 - BIAS_X;
+	float y_off = data.get_y() * 100000.0 / 1100.0 - BIAS_Y;
+	float z_off = data.get_z() * 100000.0 /  980.0 - BIAS_Z;
 
+	// Soft Iron calibration
 	calib[0] = SOFT_IRON_MATRIX_X[0] * x_off + SOFT_IRON_MATRIX_X[1] * y_off + SOFT_IRON_MATRIX_X[2] * z_off;
 	calib[1] = SOFT_IRON_MATRIX_Y[0] * x_off + SOFT_IRON_MATRIX_Y[1] * y_off + SOFT_IRON_MATRIX_Y[2] * z_off;
 	calib[2] = SOFT_IRON_MATRIX_Z[0] * x_off + SOFT_IRON_MATRIX_Z[1] * y_off + SOFT_IRON_MATRIX_Z[2] * z_off;
 }
 
+MagnetometerRawData::MagnetometerRawData() {
+    set_x(0);
+    set_y(0);
+    set_z(0);
+}
+
+void MagnetometerRawData::get_axis_data(SPI_HandleTypeDef hspi) {
+	set_x(LIS3MDL_GetXaxisData(hspi));
+	set_y(LIS3MDL_GetYaxisData(hspi));
+	set_z(LIS3MDL_GetZaxisData(hspi));
+}

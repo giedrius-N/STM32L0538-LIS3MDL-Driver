@@ -104,6 +104,10 @@ int main(void)
   MX_USART1_UART_Init();
   GPIO_A_5_B_4_Init();
 
+
+  MagnetometerRawData magRawData;
+
+
   LIS3MDL_Startup(hspi2);
   /* USER CODE END 2 */
 
@@ -114,26 +118,24 @@ int main(void)
     /* USER CODE END WHILE */
 	  LIS3MDL_WriteRegister(CTRL_REG3, ZERO_VALUE, hspi2);
 
-		uint8_t ctrlReg5 = 0xC0;
-		LIS3MDL_WriteRegister(CTRL_REG5, ctrlReg5, hspi2);
-		HAL_Delay(100);
+      LIS3MDL_WriteRegister(CTRL_REG5, 0xC0, hspi2);
+	  HAL_Delay(100);
 	  uint8_t statusReg = LIS3MDL_ReadRegister(0x27, hspi2);
 	  if ((statusReg & (1 << 2)) == 0) {
 		  continue;
 	  }
 	  if ((statusReg & (1 << 6)) != 0) {
 
-		  int16_t xData = LIS3MDL_GetXaxisData(hspi2);
-		  int16_t yData = LIS3MDL_GetYaxisData(hspi2);
-		  int16_t zData = LIS3MDL_GetZaxisData(hspi2);
+		  magRawData.get_axis_data(hspi2);
 
 		  float calib[3];
-		  Calibrate(&xData, &yData, &zData, calib);
+		  Calibrate(magRawData, calib);
 
 		  int heading = round(atan2(calib[1], calib[0]) * 180 / M_PI);
 
-		  if (zData > 0)
+		  if (magRawData.get_z() > 0) {
 			  heading *= -1;
+		  }
 
 		  heading += MAG_DECLINATION;
 		  if (heading < 0)
@@ -158,9 +160,6 @@ int main(void)
 			  HAL_Delay(500);
 			  HAL_GPIO_WritePin(GPIOB, GPIO_PIN_4, GPIO_PIN_RESET);
 		  }
-
-
-
 
 		  char axisDataStr[20];
 		  sprintf(axisDataStr, "%d\r\n", heading);

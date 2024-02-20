@@ -33,13 +33,49 @@
 #define BIAS_X 67020.821058
 #define BIAS_Y -93341.600766
 #define BIAS_Z -7830.178850
-
-#define MAG_DECLINATION 5
-
+#define MAG_DECLINATION 5  //Magnetic declination in Czech Republic
 
 const float SOFT_IRON_MATRIX_X[] = {0.359843, 0.025408, -0.043194};
 const float SOFT_IRON_MATRIX_Y[] = {0.025408, 0.422331, -0.008441};
 const float SOFT_IRON_MATRIX_Z[] = {-0.043194, -0.008441, 0.370303};
+
+/*
+ * Class
+ */
+class MagnetometerRawData {
+	private:
+		int16_t x;
+		int16_t y;
+		int16_t z;
+
+	public:
+		MagnetometerRawData();
+
+		// Setters / getters
+		void set_x(int16_t x) {
+			this->x = x;
+		}
+		int16_t get_x(void) {
+			return x;
+		}
+
+		void set_y(int16_t y) {
+			this->y = y;
+		}
+		int16_t get_y(void) {
+			return y;
+		}
+
+		void set_z(int16_t z) {
+			this->z = z;
+		}
+		int16_t get_z(void) {
+			return z;
+		}
+
+		void get_axis_data(SPI_HandleTypeDef hspi);
+};
+
 
 
 /*
@@ -57,7 +93,7 @@ int16_t LIS3MDL_GetZaxisData(SPI_HandleTypeDef hspi);
 
 int16_t TwosCompToDec(uint16_t value);
 
-void Calibrate(int16_t *x, int16_t *y, int16_t *z, float *calib);
+void Calibrate(MagnetometerRawData data, float *calib);
 
 
 #endif /* INC_LIS3MDL_HPP_ */
