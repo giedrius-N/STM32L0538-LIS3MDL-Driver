@@ -28,13 +28,11 @@ void LIS3MDL_SetDefault(SPI_HandleTypeDef hspi)
 	//Reset to default
 	LIS3MDL_WriteRegister(CTRL_REG2, ZERO_VALUE, hspi);
 
-//	uint8_t ctrlReg1 = 0b00010000;
 	uint8_t ctrlReg1 = 0x10;
 	LIS3MDL_WriteRegister(CTRL_REG1, ctrlReg1, hspi);
 
 	LIS3MDL_WriteRegister(CTRL_REG4, ZERO_VALUE, hspi);
 
-//	uint8_t ctrlReg3 = 0b00000011;
 	uint8_t ctrlReg3 = 0x03;
 	LIS3MDL_WriteRegister(CTRL_REG3, ctrlReg3, hspi);
 

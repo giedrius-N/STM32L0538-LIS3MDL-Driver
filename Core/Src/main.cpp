@@ -24,6 +24,7 @@
 #include "LIS3MDL.hpp"
 #include "helpers.h"
 #include <string.h>
+#include "stm32l0xx_hal_gpio.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -50,6 +51,8 @@ TIM_HandleTypeDef htim6;
 
 /* USER CODE BEGIN PV */
 UART_HandleTypeDef huart1;
+
+volatile int dataReady = 0;
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -64,9 +67,10 @@ static void MX_USART1_UART_Init(void);
 
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
-void blink_led() {
-  HAL_GPIO_TogglePin(GPIOB, GPIO_PIN_4);
-  HAL_Delay(500);
+void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin)
+{
+	dataReady = 1;
+
 }
 /* USER CODE END 0 */
 
@@ -103,13 +107,12 @@ int main(void)
   MX_TIM6_Init();
   /* USER CODE BEGIN 2 */
   MX_USART1_UART_Init();
-  GPIO_A_5_B_4_Init();
-
+  GPIO_A5B4_Init();
 
   MagnetometerRawData magRawData;
 
-
   LIS3MDL_Startup(hspi2);
+
   /* USER CODE END 2 */
 
   /* Infinite loop */
@@ -117,15 +120,12 @@ int main(void)
   while (1)
   {
     /* USER CODE END WHILE */
-	  LIS3MDL_WriteRegister(CTRL_REG3, ZERO_VALUE, hspi2);
 
-	  HAL_Delay(100);
-	  uint8_t statusReg = LIS3MDL_ReadRegister(0x27, hspi2);
-	  if ((statusReg & (1 << 2)) == 0) {
-		  continue;
-	  }
-	  if ((statusReg & (1 << 6)) != 0) {
+	  //Non-blocking mode
+	  if (dataReady) {
+		  dataReady = 0;
 
+		  LIS3MDL_WriteRegister(CTRL_REG3, ZERO_VALUE, hspi2);
 		  magRawData.get_axis_data(hspi2);
 
 		  float calib[3];
@@ -136,8 +136,25 @@ int main(void)
 
 		  handle_leds(heading);
 		  send_heading_uart(heading, huart1);
-
 	  }
+
+	  //Blocking
+//	  LIS3MDL_WriteRegister(CTRL_REG3, ZERO_VALUE, hspi2);
+//
+//	  HAL_Delay(100);
+//	  uint8_t statusReg = LIS3MDL_ReadRegister(0x27, hspi2);
+//	  if (((statusReg & (1 << 2)) != 0) && ((statusReg & (1 << 6)) != 0)) {
+//		  magRawData.get_axis_data(hspi2);
+//
+//	  	  float calib[3];
+//	  	  calibrate(magRawData, calib);
+//
+//	  	  int heading;
+//	      calculate_heading(calib, &heading, magRawData.get_z());
+//
+//	  	  handle_leds(heading);
+//	  	  send_heading_uart(heading, huart1);
+//	  }
     /* USER CODE BEGIN 3 */
   }
   /* USER CODE END 3 */
@@ -323,6 +340,15 @@ static void MX_GPIO_Init(void)
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
   HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
 
+  GPIO_InitStruct.Pin = GPIO_PIN_5;
+  GPIO_InitStruct.Mode = GPIO_MODE_IT_RISING;
+  GPIO_InitStruct.Pull = GPIO_NOPULL;
+  HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
+
+  /* EXTI interrupt init*/
+  HAL_NVIC_SetPriority(EXTI4_15_IRQn, 0, 0);
+  HAL_NVIC_EnableIRQ(EXTI4_15_IRQn);
+
 /* USER CODE BEGIN MX_GPIO_Init_2 */
 /* USER CODE END MX_GPIO_Init_2 */
 }
@@ -364,7 +390,7 @@ static void MX_USART1_UART_Init(void)
 }
 
 
-static void GPIO_A_5_B_4_Init(void)
+void GPIO_A5B4_Init(void)
 {
 	  GPIO_InitTypeDef GPIO_InitStruct;
 	  GPIO_InitStruct.Pin = GPIO_PIN_4;

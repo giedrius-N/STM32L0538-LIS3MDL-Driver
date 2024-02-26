@@ -24,6 +24,7 @@
 #define CTRL_REG3 0x22
 #define CTRL_REG4 0x23
 #define CTRL_REG5 0x24
+#define STATUS_REG 0x27
 #define OUT_X_L 0x28
 #define OUT_X_H 0x29
 #define OUT_Y_L 0x2A

@@ -28,7 +28,7 @@ extern "C" {
 
 /* Includes ------------------------------------------------------------------*/
 #include "stm32l0xx_hal.h"
-static void GPIO_A_5_B_4_Init(void);
+
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
 
@@ -65,7 +65,7 @@ void Error_Handler(void);
 #define LED4_GPIO_Port GPIOA
 
 /* USER CODE BEGIN Private defines */
-
+void GPIO_A5B4_Init(void);
 /* USER CODE END Private defines */
 
 #ifdef __cplusplus

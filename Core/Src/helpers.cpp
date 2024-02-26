@@ -25,18 +25,15 @@ void calculate_heading(float calib[], int *heading, int16_t z) {
 void handle_leds(int heading) {
 	  if (heading >= 225 && 315 >= heading) {
 		  HAL_GPIO_WritePin(GPIOB, LED1, GPIO_PIN_RESET);
-		  //HAL_Delay(500);
 		  HAL_GPIO_WritePin(GPIOA, LED2, GPIO_PIN_SET);
 
 	  }
 	  else if (heading >= 45 && 135 >= heading) {
 		  HAL_GPIO_WritePin(GPIOA, LED2, GPIO_PIN_RESET);
-		  //HAL_Delay(500);
 		  HAL_GPIO_WritePin(GPIOB, LED1, GPIO_PIN_SET);
 	  }
 	  else {
 		  HAL_GPIO_WritePin(GPIOA, LED2, GPIO_PIN_RESET);
-		  //HAL_Delay(500);
 		  HAL_GPIO_WritePin(GPIOB, LED1, GPIO_PIN_RESET);
 	  }
 }
