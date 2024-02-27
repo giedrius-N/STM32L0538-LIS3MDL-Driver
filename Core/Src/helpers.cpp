@@ -42,13 +42,21 @@ void send_heading_uart(int heading, UART_HandleTypeDef huart) {
 	char axisDataStr[20];
 	sprintf(axisDataStr, "%d\r\n", heading);
 
-
 	uint8_t axisData[20];
 	memcpy(axisData, axisDataStr, strlen(axisDataStr));
 
-
-	int result = HAL_UART_Transmit(&huart, axisData, strlen(axisDataStr), HAL_MAX_DELAY);
+	HAL_UART_Transmit(&huart, axisData, strlen(axisDataStr), HAL_MAX_DELAY);
 	HAL_Delay(1000);
+}
+
+void handle_config_callback(UART_HandleTypeDef huart, ConfigHandler chandler, uint8_t cdata[],
+																	SPI_HandleTypeDef hspi) {
+	chandler.process_config_req(cdata, hspi);
+
+	uint8_t config_callback[6];
+	handle_config_callback(chandler, config_callback);
+
+	HAL_UART_Transmit(&huart, config_callback, sizeof(config_callback), HAL_MAX_DELAY);
 }
 
 

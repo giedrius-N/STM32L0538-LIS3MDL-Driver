@@ -52,7 +52,8 @@ TIM_HandleTypeDef htim6;
 /* USER CODE BEGIN PV */
 UART_HandleTypeDef huart1;
 
-volatile int dataReady = 0;
+volatile int data_ready = 0;
+volatile int config_ready = 0;
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -69,8 +70,13 @@ static void MX_USART1_UART_Init(void);
 /* USER CODE BEGIN 0 */
 void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin)
 {
-	dataReady = 1;
+	data_ready = 1;
 
+}
+
+void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
+{
+	config_ready = 1;
 }
 /* USER CODE END 0 */
 
@@ -110,9 +116,11 @@ int main(void)
   GPIO_A5B4_Init();
 
   MagnetometerRawData magRawData;
+  uint8_t config_data[4];
+  // Non blocking on by default
+  uint8_t non_blocking = 1;
 
-  LIS3MDL_Startup(hspi2);
-
+  ConfigHandler config_handler(hspi2);
   /* USER CODE END 2 */
 
   /* Infinite loop */
@@ -121,40 +129,53 @@ int main(void)
   {
     /* USER CODE END WHILE */
 
-	  //Non-blocking mode
-	  if (dataReady) {
-		  dataReady = 0;
+	  if (non_blocking) {
+		  // Non-blocking mode based on DRDY pin interrupt
+		  if (data_ready) {
+			  data_ready = 0;
 
+			  LIS3MDL_WriteRegister(CTRL_REG3, ZERO_VALUE, hspi2);
+			  magRawData.get_axis_data(hspi2);
+
+		  	  float calib[3];
+		  	  calibrate(magRawData, calib);
+
+			  int heading;
+		 	  calculate_heading(calib, &heading, magRawData.get_z());
+
+	  		  handle_leds(heading);
+	 		  send_heading_uart(heading, huart1);
+	  	  }
+	  }
+	  else {
+		  // Blocking mode based on polling method
 		  LIS3MDL_WriteRegister(CTRL_REG3, ZERO_VALUE, hspi2);
-		  magRawData.get_axis_data(hspi2);
 
-		  float calib[3];
-		  calibrate(magRawData, calib);
+		  HAL_Delay(100);
+		  uint8_t statusReg = LIS3MDL_ReadRegister(0x27, hspi2);
+		  if (((statusReg & (1 << 2)) != 0) && ((statusReg & (1 << 6)) != 0)) {
+			  magRawData.get_axis_data(hspi2);
 
-		  int heading;
-		  calculate_heading(calib, &heading, magRawData.get_z());
+		  	  float calib[3];
+		  	  calibrate(magRawData, calib);
 
-		  handle_leds(heading);
-		  send_heading_uart(heading, huart1);
+		  	  int heading;
+		      calculate_heading(calib, &heading, magRawData.get_z());
+
+		  	  handle_leds(heading);
+		  	  send_heading_uart(heading, huart1);
+		  }
 	  }
 
-	  //Blocking
-//	  LIS3MDL_WriteRegister(CTRL_REG3, ZERO_VALUE, hspi2);
-//
-//	  HAL_Delay(100);
-//	  uint8_t statusReg = LIS3MDL_ReadRegister(0x27, hspi2);
-//	  if (((statusReg & (1 << 2)) != 0) && ((statusReg & (1 << 6)) != 0)) {
-//		  magRawData.get_axis_data(hspi2);
-//
-//	  	  float calib[3];
-//	  	  calibrate(magRawData, calib);
-//
-//	  	  int heading;
-//	      calculate_heading(calib, &heading, magRawData.get_z());
-//
-//	  	  handle_leds(heading);
-//	  	  send_heading_uart(heading, huart1);
-//	  }
+	  HAL_UART_Receive_IT(&huart1, config_data, 4);
+	  if (config_ready) {
+		  config_ready = 0;
+
+		  handle_config_callback(huart1, config_handler, config_data, hspi2);
+
+		  // Set blocking mode
+		  non_blocking = config_handler.get_blocking_mode();
+	  }
     /* USER CODE BEGIN 3 */
   }
   /* USER CODE END 3 */

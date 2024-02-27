@@ -41,8 +41,12 @@ const float SOFT_IRON_MATRIX_X[] = {0.359843, 0.025408, -0.043194};
 const float SOFT_IRON_MATRIX_Y[] = {0.025408, 0.422331, -0.008441};
 const float SOFT_IRON_MATRIX_Z[] = {-0.043194, -0.008441, 0.370303};
 
+enum { LOW, MEDIUM, HIGH, ULTRA_HIGH };
+enum { TEMPOFF, TEMPON };
+enum { BLOCKING, NONBLOCKING };
+
 /*
- * Class
+ * Classes
  */
 class MagnetometerRawData {
 	private:
@@ -53,38 +57,48 @@ class MagnetometerRawData {
 	public:
 		MagnetometerRawData();
 
-		// Setters / getters
-		void set_x(int16_t x) {
-			this->x = x;
-		}
-		int16_t get_x(void) {
-			return x;
-		}
+		void set_x(int16_t x);
+		int16_t get_x(void);
 
-		void set_y(int16_t y) {
-			this->y = y;
-		}
-		int16_t get_y(void) {
-			return y;
-		}
+		void set_y(int16_t y);
+		int16_t get_y(void);
 
-		void set_z(int16_t z) {
-			this->z = z;
-		}
-		int16_t get_z(void) {
-			return z;
-		}
+		void set_z(int16_t z);
+		int16_t get_z(void);
 
 		void get_axis_data(SPI_HandleTypeDef hspi);
 };
 
+class ConfigHandler {
+	private:
+		uint8_t blocking_mode;
+		uint8_t power_mode;
+		uint8_t temp;
+	public:
+		ConfigHandler(SPI_HandleTypeDef hspi);
+
+		uint8_t get_blocking_mode();
+		uint8_t get_power_mode();
+		uint8_t get_temp();
+
+		void init_default_config(SPI_HandleTypeDef hspi);
+		void process_config_req(uint8_t configData[], SPI_HandleTypeDef hspi);
+
+		uint8_t process_power_mode(uint8_t param1, uint8_t param2);
+		uint8_t process_temp(uint8_t param);
+		uint8_t process_blocking_mode(uint8_t param);
+		void config(uint8_t power_mode, uint8_t temp, SPI_HandleTypeDef hspi);
+};
 
 
 /*
  * Functions
  */
 void LIS3MDL_Startup(SPI_HandleTypeDef hspi);
+
 void LIS3MDL_SetDefault(SPI_HandleTypeDef hspi);
+
+void handle_config_callback(ConfigHandler chandler, uint8_t result[]);
 
 uint8_t LIS3MDL_ReadRegister(uint8_t regAddr, SPI_HandleTypeDef hspi);
 void LIS3MDL_WriteRegister(uint8_t regAddr, uint8_t data, SPI_HandleTypeDef hspi);
@@ -93,9 +107,8 @@ int16_t LIS3MDL_GetXaxisData(SPI_HandleTypeDef hspi);
 int16_t LIS3MDL_GetYaxisData(SPI_HandleTypeDef hspi);
 int16_t LIS3MDL_GetZaxisData(SPI_HandleTypeDef hspi);
 
-int16_t TwosCompToDec(uint16_t value);
+int16_t twos_comp_to_dec(uint16_t value);
 
 void calibrate(MagnetometerRawData data, float *calib);
-
 
 #endif /* INC_LIS3MDL_HPP_ */

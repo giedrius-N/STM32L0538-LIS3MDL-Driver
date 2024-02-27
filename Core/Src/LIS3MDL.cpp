@@ -86,7 +86,7 @@ int16_t LIS3MDL_GetXaxisData(SPI_HandleTypeDef hspi)
 
 	xAxisData = (xDataH << 8) | xDataL;
 
-	return TwosCompToDec(xAxisData);
+	return twos_comp_to_dec(xAxisData);
 }
 
 int16_t LIS3MDL_GetYaxisData(SPI_HandleTypeDef hspi)
@@ -98,7 +98,7 @@ int16_t LIS3MDL_GetYaxisData(SPI_HandleTypeDef hspi)
 
 	yAxisData = (yDataH << 8) | yDataL;
 
-	return TwosCompToDec(yAxisData);
+	return twos_comp_to_dec(yAxisData);
 }
 
 int16_t LIS3MDL_GetZaxisData(SPI_HandleTypeDef hspi)
@@ -110,17 +110,13 @@ int16_t LIS3MDL_GetZaxisData(SPI_HandleTypeDef hspi)
 
 	zAxisData = (zDataH << 8) | zDataL;
 
-	return TwosCompToDec(zAxisData);
+	return twos_comp_to_dec(zAxisData);
 }
 
 
 
-int16_t TwosCompToDec(uint16_t value)
+int16_t twos_comp_to_dec(uint16_t value)
 {
-    // [0x0000; 0x7FFF] corresponds to [0; 32,767]
-    // [0x8000; 0xFFFF] corresponds to [-32,768; -1]
-    // int16_t has the range [-32,768; 32,767]
-
     uint16_t sign_mask = 0x8000;
 
     // if positive
@@ -146,6 +142,76 @@ void calibrate(MagnetometerRawData data, float *calib)
 	calib[2] = SOFT_IRON_MATRIX_Z[0] * x_off + SOFT_IRON_MATRIX_Z[1] * y_off + SOFT_IRON_MATRIX_Z[2] * z_off;
 }
 
+void handle_config_callback(ConfigHandler chandler, uint8_t result[]) {
+	switch(chandler.get_power_mode()) {
+		case LOW:
+			result[0] = 'L';
+			result[1] = 'P';
+			break;
+		case MEDIUM:
+			result[0] = 'M';
+			result[1] = 'P';
+			break;
+		case HIGH:
+			result[0] = 'H';
+			result[1] = 'P';
+			break;
+		case ULTRA_HIGH:
+			result[0] = 'U';
+			result[1] = 'H';
+			break;
+		default:
+			result[0] = 'X';
+			result[1] = 'X';
+	}
+
+	switch(chandler.get_temp()) {
+		case TEMPON:
+			result[2] = 'T';
+			break;
+		case TEMPOFF:
+			result[2] = 'F';
+			break;
+		default:
+			result[2] = 'X';
+	}
+
+	switch(chandler.get_blocking_mode()) {
+		case BLOCKING:
+			result[3] = 'B';
+			break;
+		case NONBLOCKING:
+			result[3] = 'N';
+			break;
+		default:
+			result[3] = 'X';
+	}
+
+	result[4] = '\r';
+	result[5] = '\n';
+}
+int16_t MagnetometerRawData::get_x() {
+	return x;
+}
+int16_t MagnetometerRawData::get_y() {
+	return y;
+}
+int16_t MagnetometerRawData::get_z() {
+	return z;
+}
+
+void MagnetometerRawData::set_x(int16_t x) {
+	this->x = x;
+}
+
+void MagnetometerRawData::set_y(int16_t y) {
+	this->y = y;
+}
+
+void MagnetometerRawData::set_z(int16_t z) {
+	this->z = z;
+}
+
 MagnetometerRawData::MagnetometerRawData() {
     set_x(0);
     set_y(0);
@@ -157,3 +223,185 @@ void MagnetometerRawData::get_axis_data(SPI_HandleTypeDef hspi) {
 	set_y(LIS3MDL_GetYaxisData(hspi));
 	set_z(LIS3MDL_GetZaxisData(hspi));
 }
+
+ConfigHandler::ConfigHandler(SPI_HandleTypeDef hspi) {
+	init_default_config(hspi);
+}
+
+uint8_t ConfigHandler::get_blocking_mode() {
+	return blocking_mode;
+}
+uint8_t ConfigHandler::get_power_mode() {
+	return power_mode;
+}
+uint8_t ConfigHandler::get_temp() {
+	return temp;
+}
+
+void ConfigHandler::init_default_config(SPI_HandleTypeDef hspi) {
+	//Set full scale to +- 12 Hz
+	uint8_t ctrlReg2 = 0x40;
+	LIS3MDL_WriteRegister(CTRL_REG2, ctrlReg2, hspi);
+
+	//Set up UHP mode on the X/Y axis, ODR at 80 Hz, activates temp sensor
+	uint8_t ctrlReg1 = 0xFC;
+	LIS3MDL_WriteRegister(CTRL_REG1, ctrlReg1, hspi);
+
+	//Set up UHP mode on the Z axis
+	uint8_t ctrlReg4 = 0x0C;
+	LIS3MDL_WriteRegister(CTRL_REG4, ctrlReg4, hspi);
+
+	//Set continuous measurement mode
+	LIS3MDL_WriteRegister(CTRL_REG3, ZERO_VALUE, hspi);
+
+	//Turn on Block data update
+	uint8_t ctrlReg5 = 0xC0;
+	LIS3MDL_WriteRegister(CTRL_REG5, ctrlReg5, hspi);
+}
+
+void ConfigHandler::process_config_req(uint8_t config_data[], SPI_HandleTypeDef hspi) {
+	if (config_data[0] == 0 || config_data[3] == 0) {
+		return;
+	}
+
+	this->power_mode = process_power_mode(config_data[0], config_data[1]);
+	this->temp = process_temp(config_data[2]);
+	this->blocking_mode = process_blocking_mode(config_data[3]);
+
+	config(power_mode, temp, hspi);
+}
+
+uint8_t ConfigHandler::process_power_mode(uint8_t param1, uint8_t param2) {
+	// If L and P - Low Power Mode
+	if (param1 == 0x4C && param2 == 0x50) {
+		return LOW;
+	}
+	// If M and P - Medium Performance Mode
+	if (param1 == 0x4D && param2 == 0x50) {
+		return MEDIUM;
+	}
+	// If H and P - High Performance Mode
+	if (param1 == 0x48 && param2 == 0x50) {
+		return HIGH;
+	}
+	// If U and H - Ultra High Performane Mode
+	if (param1 == 0x55 && param2 == 0x48) {
+		return ULTRA_HIGH;
+	}
+
+	//Default
+	return ULTRA_HIGH;
+}
+
+uint8_t ConfigHandler::process_temp(uint8_t param) {
+	// Enable temperature sensor
+	if (param == 0x54) {
+		return TEMPON;
+	}
+	// Disable temperature sensor
+	if (param == 0x46) {
+		return TEMPOFF;
+	}
+
+	// Default
+	return TEMPON;
+}
+
+uint8_t ConfigHandler::process_blocking_mode(uint8_t param) {
+	// If blocking mode
+	if (param == 0x42) {
+		return BLOCKING;
+	}
+	// If non-blocking mode
+	if (param == 0x4E) {
+		return NONBLOCKING;
+	}
+
+	// Default
+	return NONBLOCKING;
+}
+
+void ConfigHandler::config(uint8_t power_mode, uint8_t temp, SPI_HandleTypeDef hspi) {
+	if (power_mode == LOW) {
+		if (temp) {
+			//Set up LP mode on the X/Y axis, ODR at 80 Hz, activates temp sensor
+			uint8_t ctrl_reg_1 = 0b10011100;
+			LIS3MDL_WriteRegister(CTRL_REG1, ctrl_reg_1, hspi);
+		}
+		else {
+			//Set up LP mode on the X/Y axis, ODR at 80 Hz, disable temp sensor
+			uint8_t ctrl_reg_1 = 0b00011100;
+			LIS3MDL_WriteRegister(CTRL_REG1, ctrl_reg_1, hspi);
+		}
+		//Set Z axis mode to LP
+		LIS3MDL_WriteRegister(CTRL_REG4, ZERO_VALUE, hspi);
+
+		return;
+	}
+
+	if (power_mode == MEDIUM) {
+		if (temp) {
+			//Set up MP mode on the X/Y axis, ODR at 80 Hz, activates temp sensor
+			uint8_t ctrl_reg_1 = 0b10111100;
+			LIS3MDL_WriteRegister(CTRL_REG1, ctrl_reg_1, hspi);
+		}
+		else {
+			//Set up MP mode on the X/Y axis, ODR at 80 Hz, disable temp sensor
+			uint8_t ctrl_reg_1 = 0b00111100;
+			LIS3MDL_WriteRegister(CTRL_REG1, ctrl_reg_1, hspi);
+		}
+		//Set Z axis mode to MP
+		uint8_t ctrl_reg_4 = 0b00000100;
+		LIS3MDL_WriteRegister(CTRL_REG4, ctrl_reg_4, hspi);
+
+		return;
+	}
+
+	if (power_mode == HIGH) {
+			if (temp) {
+				//Set up HP mode on the X/Y axis, ODR at 80 Hz, activates temp sensor
+				uint8_t ctrl_reg_1 = 0b11011100;
+				LIS3MDL_WriteRegister(CTRL_REG1, ctrl_reg_1, hspi);
+			}
+			else {
+				//Set up HP mode on the X/Y axis, ODR at 80 Hz, disable temp sensor
+				uint8_t ctrl_reg_1 = 0b01011100;
+				LIS3MDL_WriteRegister(CTRL_REG1, ctrl_reg_1, hspi);
+			}
+			//Set Z axis mode to HP
+			uint8_t ctrl_reg_4 = 0b00001000;
+			LIS3MDL_WriteRegister(CTRL_REG4, ctrl_reg_4, hspi);
+
+			return;
+	}
+
+	if (power_mode == ULTRA_HIGH) {
+			if (temp) {
+				//Set up UH mode on the X/Y axis, ODR at 80 Hz, activates temp sensor
+				uint8_t ctrl_reg_1 = 0b11111100;
+				LIS3MDL_WriteRegister(CTRL_REG1, ctrl_reg_1, hspi);
+			}
+			else {
+				//Set up UH mode on the X/Y axis, ODR at 80 Hz, disable temp sensor
+				uint8_t ctrl_reg_1 = 0b01111100;
+				LIS3MDL_WriteRegister(CTRL_REG1, ctrl_reg_1, hspi);
+			}
+			//Set Z axis mode to UH
+			uint8_t ctrl_reg_4 = 0b00001100;
+			LIS3MDL_WriteRegister(CTRL_REG4, ctrl_reg_4, hspi);
+
+			return;
+	}
+}
+
+
+
+
+
+
+
+
+
+
+
+
