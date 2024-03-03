@@ -18,13 +18,12 @@
 /* USER CODE END Header */
 /* Includes ------------------------------------------------------------------*/
 #include "main.h"
-
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
-#include "LIS3MDL.hpp"
-#include "helpers.h"
 #include <string.h>
-#include "stm32l0xx_hal_gpio.h"
+#include "lis3mdl.hpp"
+#include "magnetometerRawData.hpp"
+#include "helpers.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -71,7 +70,6 @@ static void MX_USART1_UART_Init(void);
 void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin)
 {
 	data_ready = 1;
-
 }
 
 void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
@@ -111,16 +109,17 @@ int main(void)
   MX_DMA_Init();
   MX_SPI2_Init();
   MX_TIM6_Init();
-  /* USER CODE BEGIN 2 */
   MX_USART1_UART_Init();
-  GPIO_A5B4_Init();
+  /* USER CODE BEGIN 2 */
+
 
   MagnetometerRawData magRawData;
   uint8_t config_data[4];
-  // Non blocking on by default
-  uint8_t non_blocking = 1;
 
-  ConfigHandler config_handler(hspi2);
+  // Non blocking mode on by default
+  BlockingMode non_blocking = BlockingMode::NONBLOCKING;
+
+  ConfigHandler config_handler(&hspi2);
   /* USER CODE END 2 */
 
   /* Infinite loop */
@@ -129,7 +128,7 @@ int main(void)
   {
     /* USER CODE END WHILE */
 
-	  if (non_blocking) {
+	  if (non_blocking == BlockingMode::NONBLOCKING) {
 		  // Non-blocking mode based on DRDY pin interrupt
 		  if (data_ready) {
 			  data_ready = 0;
@@ -343,9 +342,6 @@ static void MX_GPIO_Init(void)
   /*Configure GPIO pin Output Level */
   HAL_GPIO_WritePin(SS2_GPIO_Port, SS2_Pin, GPIO_PIN_RESET);
 
-  /*Configure GPIO pin Output Level */
-  //HAL_GPIO_WritePin(GPIOA, LED1_Pin|LED2_Pin|LED3_Pin|LED4_Pin, GPIO_PIN_RESET);
-  HAL_GPIO_WritePin(GPIOA, LED1_Pin|LED4_Pin, GPIO_PIN_RESET);
   /*Configure GPIO pin : SS2_Pin */
   GPIO_InitStruct.Pin = SS2_Pin;
   GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
@@ -353,9 +349,13 @@ static void MX_GPIO_Init(void)
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
   HAL_GPIO_Init(SS2_GPIO_Port, &GPIO_InitStruct);
 
-  /*Configure GPIO pins : LED1_Pin LED2_Pin LED3_Pin LED4_Pin */
-  //GPIO_InitStruct.Pin = LED1_Pin|LED2_Pin|LED3_Pin|LED4_Pin;
-  GPIO_InitStruct.Pin = LED1_Pin|LED4_Pin;
+  GPIO_InitStruct.Pin = GPIO_PIN_4;
+  GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
+  GPIO_InitStruct.Pull = GPIO_NOPULL;
+  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
+  HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
+
+  GPIO_InitStruct.Pin = GPIO_PIN_5;
   GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
@@ -408,25 +408,6 @@ static void MX_USART1_UART_Init(void)
 
   /* USER CODE END USART1_Init 2 */
 
-}
-
-
-void GPIO_A5B4_Init(void)
-{
-	  GPIO_InitTypeDef GPIO_InitStruct;
-	  GPIO_InitStruct.Pin = GPIO_PIN_4;
-	  GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
-	  GPIO_InitStruct.Pull = GPIO_NOPULL;
-	  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
-	  HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
-
-
-	  GPIO_InitTypeDef GPIO_InitStruct2;
-	  GPIO_InitStruct2.Pin = GPIO_PIN_5;
-	  GPIO_InitStruct2.Mode = GPIO_MODE_OUTPUT_PP;
-	  GPIO_InitStruct2.Pull = GPIO_NOPULL;
-	  GPIO_InitStruct2.Speed = GPIO_SPEED_FREQ_LOW;
-	  HAL_GPIO_Init(GPIOA, &GPIO_InitStruct2);
 }
 /* USER CODE END 4 */
 
