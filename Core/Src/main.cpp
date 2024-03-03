@@ -151,7 +151,7 @@ int main(void)
 		  LIS3MDL_WriteRegister(CTRL_REG3, ZERO_VALUE, hspi2);
 
 		  HAL_Delay(100);
-		  uint8_t statusReg = LIS3MDL_ReadRegister(0x27, hspi2);
+		  uint8_t statusReg = LIS3MDL_ReadRegister(STATUS_REG, hspi2);
 		  if (((statusReg & (1 << 2)) != 0) && ((statusReg & (1 << 6)) != 0)) {
 			  magRawData.get_axis_data(hspi2);
 

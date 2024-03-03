@@ -17,6 +17,16 @@
 #define ANGLE_135 135
 #define ONE_SECOND 1000
 
+#define CHAR_L 0x4C
+#define CHAR_P 0x50
+#define CHAR_M 0x4D
+#define CHAR_H 0x48
+#define CHAR_U 0x55
+#define CHAR_T 0x54
+#define CHAR_F 0x46
+#define CHAR_B 0x42
+#define CHAR_N 0x4E
+
 #define MAX_HEADING_SIZE 8
 #define CONFIG_CALLBACK_SIZE 6
 

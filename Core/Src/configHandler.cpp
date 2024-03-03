@@ -50,19 +50,19 @@ PowerMode ConfigHandler::process_power_mode(uint8_t param1, uint8_t param2) {
 	PowerMode mode;
 
 	// If L and P - Low Power Mode
-	if (param1 == 'L' && param2 == 'P') {
+	if (param1 == CHAR_L && param2 == CHAR_P) {
 		mode = PowerMode::LOW;
 	}
 	// If M and P - Medium Performance Mode
-	else if (param1 == 'M' && param2 == 'P') {
+	else if (param1 == CHAR_M && param2 == CHAR_P) {
 		mode = PowerMode::MEDIUM;
 	}
 	// If H and P - High Performance Mode
-	else if (param1 == 'H' && param2 == 'P') {
+	else if (param1 == CHAR_H && param2 == CHAR_P) {
 		mode = PowerMode::HIGH;
 	}
 	// If U and H - Ultra High Performance Mode
-	else if (param1 == 'U' && param2 == 'H') {
+	else if (param1 == CHAR_U && param2 == CHAR_H) {
 		mode = PowerMode::ULTRA_HIGH;
 	}
 	// Default to Ultra High Performance Mode
@@ -77,11 +77,11 @@ TempMode ConfigHandler::process_temp(uint8_t param) {
 	TempMode mode;
 
 	// Enable temperature sensor
-	if (param == 'T') {
+	if (param == CHAR_T) {
 		mode = TempMode::TEMPON;
 	}
 	// Disable temperature sensor
-	else if (param == 'F') {
+	else if (param == CHAR_F) {
 		mode = TempMode::TEMPOFF;
 	}
 	else {
@@ -95,11 +95,11 @@ BlockingMode ConfigHandler::process_blocking_mode(uint8_t param) {
 	BlockingMode mode;
 
 	// If blocking mode
-	if (param == 'B') {
+	if (param == CHAR_B) {
 		mode =  BlockingMode::BLOCKING;
 	}
 	// If non-blocking mode
-	else if (param == 'N') {
+	else if (param == CHAR_N) {
 		mode = BlockingMode::NONBLOCKING;
 	}
 	else {
